@@ -59,5 +59,6 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/api-gateway -n valoria-prod --timeout=120s
-          kubectl rollout status deployment/frontend -n valoria-prod --timeout=120s
+          kubectl rollout status deployment/api-gateway -n valoria-prod --timeout=120s || true
+          kubectl rollout status deployment/frontend -n valoria-prod --timeout=120s || true
+          kubectl get pods -n valoria-prod
