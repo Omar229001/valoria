@@ -1,0 +1,130 @@
+networks:
+  valoria-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: valoria-postgres
+    environment:
+      POSTGRES_USER: valoria
+      POSTGRES_PASSWORD: valoria_dev
+      POSTGRES_DB: valoria
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - valoria-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: valoria-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - valoria-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: valoria-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: valoria
+      RABBITMQ_DEFAULT_PASS: valoria_dev
+    networks:
+      - valoria-network
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    container_name: valoria-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=debug
+      - USER_SERVICE_URL=http://user-service:8081
+      - COTATION_SERVICE_URL=http://cotation-service:8082
+      - PRICING_SERVICE_URL=http://pricing-service:8083
+    depends_on:
+      - user-service
+      - cotation-service
+      - pricing-service
+    networks:
+      - valoria-network
+
+  user-service:
+    build:
+      context: ./services/user-service
+    container_name: valoria-user-service
+    environment:
+      - RUST_LOG=debug
+      - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev_secret_change_in_prod
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - valoria-network
+
+  scraper-service:
+    build:
+      context: ./services/scraper-service
+    container_name: valoria-scraper-service
+    environment:
+      - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
+      - RABBITMQ_URL=amqp://valoria:valoria_dev@rabbitmq:5672
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - valoria-network
+
+  pricing-service:
+    build:
+      context: ./services/pricing-service
+    container_name: valoria-pricing-service
+    environment:
+      - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
+    depends_on:
+      - postgres
+    networks:
+      - valoria-network
+
+  cotation-service:
+    build:
+      context: ./services/cotation-service
+    container_name: valoria-cotation-service
+    environment:
+      - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
+      - PRICING_SERVICE_URL=http://pricing-service:8083
+      - RABBITMQ_URL=amqp://valoria:valoria_dev@rabbitmq:5672
+    depends_on:
+      - postgres
+      - pricing-service
+      - rabbitmq
+    networks:
+      - valoria-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: valoria-frontend
+    ports:
+      - "4000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    depends_on:
+      - api-gateway
+    networks:
+      - valoria-network
