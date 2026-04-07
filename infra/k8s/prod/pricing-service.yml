@@ -13,6 +13,8 @@ spec:
       labels:
         app: pricing-service
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: pricing-service
           image: ghcr.io/omar229001/valoria/pricing-service:latest

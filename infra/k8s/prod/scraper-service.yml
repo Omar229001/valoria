@@ -13,6 +13,8 @@ spec:
       labels:
         app: scraper-service
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: scraper-service
           image: ghcr.io/omar229001/valoria/scraper-service:latest
