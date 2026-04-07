@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scraper-service
+  namespace: valoria-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scraper-service
+  template:
+    metadata:
+      labels:
+        app: scraper-service
+    spec:
+      containers:
+        - name: scraper-service
+          image: ghcr.io/omar229001/valoria/scraper-service:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://valoria:$(POSTGRES_PASSWORD)@postgres:5432/valoria"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: valoria-secrets
+                  key: postgres-password
+            - name: RABBITMQ_URL
+              value: "amqp://valoria:$(RABBITMQ_PASSWORD)@rabbitmq:5672"
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: valoria-secrets
+                  key: rabbitmq-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scraper-service
+  namespace: valoria-prod
+spec:
+  selector:
+    app: scraper-service
+  ports:
+    - port: 8000
+      targetPort: 8000

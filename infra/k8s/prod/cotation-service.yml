@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cotation-service
+  namespace: valoria-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cotation-service
+  template:
+    metadata:
+      labels:
+        app: cotation-service
+    spec:
+      containers:
+        - name: cotation-service
+          image: ghcr.io/omar229001/valoria/cotation-service:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://valoria:$(POSTGRES_PASSWORD)@postgres:5432/valoria"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: valoria-secrets
+                  key: postgres-password
+            - name: PRICING_SERVICE_URL
+              value: "http://pricing-service:8083"
+            - name: RABBITMQ_URL
+              value: "amqp://valoria:$(RABBITMQ_PASSWORD)@rabbitmq:5672"
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: valoria-secrets
+                  key: rabbitmq-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cotation-service
+  namespace: valoria-prod
+spec:
+  selector:
+    app: cotation-service
+  ports:
+    - port: 8082
+      targetPort: 8000

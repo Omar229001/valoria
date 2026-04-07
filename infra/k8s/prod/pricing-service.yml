@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricing-service
+  namespace: valoria-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pricing-service
+  template:
+    metadata:
+      labels:
+        app: pricing-service
+    spec:
+      containers:
+        - name: pricing-service
+          image: ghcr.io/omar229001/valoria/pricing-service:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://valoria:$(POSTGRES_PASSWORD)@postgres:5432/valoria"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: valoria-secrets
+                  key: postgres-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pricing-service
+  namespace: valoria-prod
+spec:
+  selector:
+    app: pricing-service
+  ports:
+    - port: 8083
+      targetPort: 8000
