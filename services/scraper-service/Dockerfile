@@ -1,7 +1,10 @@
-FROM python:3.12-slim
+FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
+
 WORKDIR /app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir --timeout 100 --retries 5 -r requirements.txt
+
 COPY src ./src
 EXPOSE 8000
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

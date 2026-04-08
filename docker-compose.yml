@@ -81,6 +81,8 @@ services:
     build:
       context: ./services/scraper-service
     container_name: valoria-scraper-service
+    ports:
+      - "8002:8000"
     environment:
       - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
       - RABBITMQ_URL=amqp://valoria:valoria_dev@rabbitmq:5672
