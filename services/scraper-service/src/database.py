@@ -10,6 +10,24 @@ def get_connection():
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
+
+    # Supprimer l'ancienne contrainte UNIQUE sur url si elle existe (migration)
+    cursor.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.table_constraints
+                WHERE table_name = 'car_listings'
+                  AND constraint_type = 'UNIQUE'
+                  AND constraint_name = 'car_listings_url_key'
+            ) THEN
+                ALTER TABLE car_listings DROP CONSTRAINT car_listings_url_key;
+            END IF;
+        END
+        $$;
+    """)
+
+    # Créer la table sans contrainte UNIQUE globale sur url
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS car_listings (
             id SERIAL PRIMARY KEY,
@@ -23,10 +41,17 @@ def init_db():
             city VARCHAR(100),
             source VARCHAR(100),
             url TEXT,
-            scraped_at TIMESTAMP DEFAULT NOW(),
-            UNIQUE(url)
+            scraped_at TIMESTAMP DEFAULT NOW()
         )
     """)
+
+    # Index partiel : unicité sur url SEULEMENT quand url n'est pas null
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS car_listings_url_unique
+        ON car_listings (url)
+        WHERE url IS NOT NULL
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -37,16 +62,45 @@ def save_listings(listings: list) -> int:
     saved = 0
     for listing in listings:
         try:
-            cursor.execute("""
-                INSERT INTO car_listings 
-                (brand, model, year, mileage, fuel, transmission, price, city, source, url)
-                VALUES (%(brand)s, %(model)s, %(year)s, %(mileage)s, %(fuel)s,
-                        %(transmission)s, %(price)s, %(city)s, %(source)s, %(url)s)
-                ON CONFLICT (url) DO NOTHING
-            """, listing)
-            saved += cursor.rowcount
-        except Exception:
+            url = listing.get("url")
+
+            if url:
+                # URL présente → déduplique par URL (index partiel)
+                cursor.execute("""
+                    INSERT INTO car_listings
+                    (brand, model, year, mileage, fuel, transmission, price, city, source, url)
+                    VALUES (%(brand)s, %(model)s, %(year)s, %(mileage)s, %(fuel)s,
+                            %(transmission)s, %(price)s, %(city)s, %(source)s, %(url)s)
+                    ON CONFLICT (url) WHERE url IS NOT NULL DO NOTHING
+                """, listing)
+                if cursor.rowcount > 0:
+                    saved += 1
+            else:
+                # Pas d'URL → vérification manuelle avant insert
+                cursor.execute("""
+                    SELECT COUNT(*) as cnt FROM car_listings
+                    WHERE brand = %(brand)s
+                      AND model = %(model)s
+                      AND year = %(year)s
+                      AND mileage = %(mileage)s
+                      AND ROUND(price::numeric, 0) = ROUND(%(price)s::numeric, 0)
+                      AND source = %(source)s
+                """, listing)
+                row = cursor.fetchone()
+                count = row["cnt"] if row else 0
+                if count == 0:
+                    cursor.execute("""
+                        INSERT INTO car_listings
+                        (brand, model, year, mileage, fuel, transmission, price, city, source, url)
+                        VALUES (%(brand)s, %(model)s, %(year)s, %(mileage)s, %(fuel)s,
+                                %(transmission)s, %(price)s, %(city)s, %(source)s, %(url)s)
+                    """, listing)
+                    saved += 1
+
+        except Exception as e:
+            print(f"[DB] Erreur save_listings: {e} | listing: {listing}")
             continue
+
     conn.commit()
     cursor.close()
     conn.close()

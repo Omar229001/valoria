@@ -3,6 +3,7 @@ import random
 from abc import ABC, abstractmethod
 from typing import List
 from playwright.sync_api import sync_playwright
+from playwright_stealth import stealth_sync
 from src.schemas import CarListing
 
 class BaseScraper(ABC):
@@ -20,7 +21,9 @@ class BaseScraper(ABC):
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
-                "--disable-blink-features=AutomationControlled"
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--window-size=1280,800"
             ]
         )
         context = self._browser.new_context(
@@ -28,9 +31,18 @@ class BaseScraper(ABC):
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                        "AppleWebKit/537.36 (KHTML, like Gecko) "
                        "Chrome/120.0.0.0 Safari/537.36",
-            locale="fr-FR"
+            locale="fr-FR",
+            timezone_id="Europe/Paris",
+            extra_http_headers={
+                "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
         )
         self._page = context.new_page()
+
+        # Mode stealth — masque les signatures de bot
+        stealth_sync(self._page)
+
         return self
 
     def __exit__(self, *args):
@@ -39,14 +51,8 @@ class BaseScraper(ABC):
         if self._playwright:
             self._playwright.stop()
 
-    def _wait(self, min_sec=1.5, max_sec=4.0):
+    def _wait(self, min_sec=2.0, max_sec=5.0):
         time.sleep(random.uniform(min_sec, max_sec))
-
-    def _safe_text(self, element) -> str:
-        try:
-            return element.inner_text().strip()
-        except Exception:
-            return ""
 
     @abstractmethod
     def search(self, brand: str, model: str, year_min: int, year_max: int) -> List[CarListing]:

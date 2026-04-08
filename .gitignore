@@ -213,3 +213,11 @@ infra/terraform/terraform.tfstate
 infra/terraform/terraform.tfstate.backup
 infra/terraform/terraform.tfvars
 infra/terraform/*.tfvars
+
+# Node.js
+node_modules/
+dist/
+.parcel-cache/
+
+# Rust build artifacts
+target/

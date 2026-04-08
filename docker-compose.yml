@@ -51,14 +51,14 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - RUST_LOG=debug
-      - USER_SERVICE_URL=http://user-service:8081
-      - COTATION_SERVICE_URL=http://cotation-service:8082
-      - PRICING_SERVICE_URL=http://pricing-service:8083
+      - JWT_SECRET=dev_secret_change_in_prod
+      - USER_SERVICE_URL=http://user-service:8000
+      - COTATION_SERVICE_URL=http://cotation-service:8000
+      - SCRAPER_SERVICE_URL=http://scraper-service:8000
     depends_on:
       - user-service
       - cotation-service
-      - pricing-service
+      - scraper-service
     networks:
       - valoria-network
 
@@ -66,14 +66,13 @@ services:
     build:
       context: ./services/user-service
     container_name: valoria-user-service
+    ports:
+      - "8004:8000"
     environment:
-      - RUST_LOG=debug
       - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
-      - REDIS_URL=redis://redis:6379
       - JWT_SECRET=dev_secret_change_in_prod
     depends_on:
       - postgres
-      - redis
     networks:
       - valoria-network
 
@@ -109,14 +108,17 @@ services:
     build:
       context: ./services/cotation-service
     container_name: valoria-cotation-service
+    ports:
+      - "8003:8000"
     environment:
       - DATABASE_URL=postgresql://valoria:valoria_dev@postgres:5432/valoria
-      - PRICING_SERVICE_URL=http://pricing-service:8083
+      - PRICING_SERVICE_URL=http://pricing-service:8000
+      - SCRAPER_SERVICE_URL=http://scraper-service:8000
       - RABBITMQ_URL=amqp://valoria:valoria_dev@rabbitmq:5672
     depends_on:
       - postgres
       - pricing-service
-      - rabbitmq
+      - scraper-service
     networks:
       - valoria-network
 
