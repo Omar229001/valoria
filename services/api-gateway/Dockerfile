@@ -1,5 +1,5 @@
 # Image complète (pas slim) : a gcc, pkg-config, libssl-dev
-FROM rust:1.80 AS builder
+FROM rust:nightly AS builder
 WORKDIR /app
 
 # 1. Cache des dépendances
