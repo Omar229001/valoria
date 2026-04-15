@@ -1,0 +1,764 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Valoria API",
+    "description": "Plateforme de cotation de véhicules d'occasion",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Valoria Team",
+      "email": "support@valoria.dev"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.valoria.dev/api",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "description": "Create a new user account and receive a JWT token",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "User login",
+        "description": "Authenticate with email and password to get JWT token",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get current user",
+        "description": "Retrieve information about the authenticated user",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token invalid or missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cotation": {
+      "post": {
+        "summary": "Create a new cotation",
+        "description": "Evaluate a vehicle and get a price estimate",
+        "tags": ["Cotation"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CotationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cotation created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CotationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cotation/history": {
+      "get": {
+        "summary": "Get cotation history",
+        "description": "Retrieve the user's cotation history with pagination",
+        "tags": ["Cotation"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotation history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCotations"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listings": {
+      "get": {
+        "summary": "Get car listings",
+        "description": "Search for used car listings with filters",
+        "tags": ["Listings"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "brand",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_min",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1900
+            }
+          },
+          {
+            "name": "year_max",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 2024
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["price_asc", "price_desc", "mileage_asc", "date_desc"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Car listings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scrape/sync": {
+      "post": {
+        "summary": "Scrape listings synchronously",
+        "description": "Launch web scraping on all sources and wait for results",
+        "tags": ["Scraping"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScrapeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scraping results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScrapeResult"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Alice Dupont"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "example": "SecurePassword123!"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "SecurePassword123!"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Alice Dupont"
+          },
+          "email": {
+            "type": "string",
+            "example": "alice@example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "admin"],
+            "example": "user"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-04-15T09:47:00Z"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "CotationRequest": {
+        "type": "object",
+        "required": ["brand", "model", "year", "mileage", "fuel", "transmission", "condition"],
+        "properties": {
+          "brand": {
+            "type": "string",
+            "example": "Renault"
+          },
+          "model": {
+            "type": "string",
+            "example": "Clio"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2024,
+            "example": 2021
+          },
+          "mileage": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 45000
+          },
+          "fuel": {
+            "type": "string",
+            "enum": ["essence", "diesel", "électrique", "hybride"],
+            "example": "essence"
+          },
+          "transmission": {
+            "type": "string",
+            "enum": ["manuelle", "automatique"],
+            "example": "manuelle"
+          },
+          "condition": {
+            "type": "string",
+            "enum": ["excellent", "bon", "moyen", "mauvais"],
+            "example": "bon"
+          },
+          "comments": {
+            "type": "string",
+            "example": "Very good condition"
+          }
+        }
+      },
+      "CotationResponse": {
+        "type": "object",
+        "properties": {
+          "cotation_id": {
+            "type": "integer",
+            "example": 42
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "mileage": {
+            "type": "integer"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "estimated_price": {
+            "type": "number",
+            "example": 12800
+          },
+          "min_price": {
+            "type": "number",
+            "example": 11500
+          },
+          "max_price": {
+            "type": "number",
+            "example": 14200
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float",
+            "example": 0.85
+          },
+          "method": {
+            "type": "string",
+            "example": "market_analysis + ml_model"
+          },
+          "market": {
+            "$ref": "#/components/schemas/MarketStats"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MarketStats": {
+        "type": "object",
+        "properties": {
+          "listings_count": {
+            "type": "integer"
+          },
+          "median_price": {
+            "type": "number"
+          },
+          "min_price": {
+            "type": "number"
+          },
+          "max_price": {
+            "type": "number"
+          }
+        }
+      },
+      "PaginatedCotations": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CotationResponse"
+            }
+          }
+        }
+      },
+      "CarListing": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "mileage": {
+            "type": "integer"
+          },
+          "price": {
+            "type": "number"
+          },
+          "fuel": {
+            "type": "string"
+          },
+          "transmission": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "scraped_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedListings": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarListing"
+            }
+          }
+        }
+      },
+      "ScrapeRequest": {
+        "type": "object",
+        "required": ["brand", "model", "year_min", "year_max"],
+        "properties": {
+          "brand": {
+            "type": "string",
+            "example": "Renault"
+          },
+          "model": {
+            "type": "string",
+            "example": "Clio"
+          },
+          "year_min": {
+            "type": "integer",
+            "example": 2020
+          },
+          "year_max": {
+            "type": "integer",
+            "example": 2023
+          },
+          "sources": {
+            "type": "string",
+            "enum": ["all", "lacentrale", "leboncoin", "autoscout24"],
+            "example": "all"
+          }
+        }
+      },
+      "ScrapeResult": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "listings_found": {
+            "type": "integer"
+          },
+          "listings_saved": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "failed"]
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
