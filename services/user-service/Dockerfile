@@ -1,4 +1,4 @@
-FROM rust:nightly-slim AS builder
+FROM rust:latest-slim AS builder
 WORKDIR /app
 COPY Cargo.toml .
 COPY src ./src
